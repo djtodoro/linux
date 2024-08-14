@@ -8,9 +8,13 @@
 #ifndef _ASM_RISCV_WORD_AT_A_TIME_H
 #define _ASM_RISCV_WORD_AT_A_TIME_H
 
-
 #include <linux/kernel.h>
 
+#ifdef CONFIG_CPU_BIG_ENDIAN
+
+#include <asm-generic/word-at-a-time.h>
+
+#else
 struct word_at_a_time {
 	const unsigned long one_bits, high_bits;
 };
@@ -44,5 +48,7 @@ static inline unsigned long find_zero(unsigned long mask)
 
 /* The mask we created is directly usable as a bytemask */
 #define zero_bytemask(mask) (mask)
+
+#endif /* CONFIG_CPU_BIG_ENDIAN */
 
 #endif /* _ASM_RISCV_WORD_AT_A_TIME_H */
