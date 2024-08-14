@@ -20,9 +20,6 @@ SYM_FUNC_START_WEAK(memmove)
 	 * Because the return matches the parameter register a0,
 	 * we will not clobber or modify that register.
 	 *
-	 * Note: This currently only works on little-endian.
-	 * To port to big-endian, reverse the direction of shifts
-	 * in the 2 misaligned fixup copy loops.
 	 */
 
 	/* Return if nothing to do */
@@ -117,15 +114,21 @@ misaligned_fixup_copy_forward:
 	 * do {
 	 * 	load_val1 = load_ptr[1];
 	 * 	store_ptr += 2;
+	 *#ifdef CONFIG_CPU_BIG_ENDIAN
+	 *	store_ptr[0 - 2] = (load_val0 << {a6}) | (load_val1 >> {a7});
+	 *#else
 	 * 	store_ptr[0 - 2] = (load_val0 >> {a6}) | (load_val1 << {a7});
-	 *
+	 *#endif
 	 * 	if (store_ptr == {a2})
 	 * 		break;
 	 *
 	 * 	load_val0 = load_ptr[2];
 	 * 	load_ptr += 2;
+	 **#ifdef CONFIG_CPU_BIG_ENDIAN
+	 *	store_ptr[1 - 2] = (load_val1 << {a6}) | (load_val0 >> {a7});
+	 *#else
 	 * 	store_ptr[1 - 2] = (load_val1 >> {a6}) | (load_val0 << {a7});
-	 *
+	 *#endif
 	 * } while (store_ptr != store_ptr_end);
 	 * store_ptr = store_ptr_end;
 	 */
@@ -134,8 +137,13 @@ misaligned_fixup_copy_forward:
 	1:
 	REG_L t1, (1 * SZREG)(a1)
 	addi  t3, t3, (2 * SZREG)
+#ifdef CONFIG_CPU_BIG_ENDIAN
+	sll   t0, t0, a6
+	srl   t2, t1, a7
+#else
 	srl   t0, t0, a6
 	sll   t2, t1, a7
+#endif
 	or    t2, t0, t2
 	REG_S t2, ((0 * SZREG) - (2 * SZREG))(t3)
 
@@ -143,8 +151,13 @@ misaligned_fixup_copy_forward:
 
 	REG_L t0, (2 * SZREG)(a1)
 	addi  a1, a1, (2 * SZREG)
+#ifdef CONFIG_CPU_BIG_ENDIAN
+	sll   t1, t1, a6
+	srl   t2, t0, a7
+#else
 	srl   t1, t1, a6
 	sll   t2, t0, a7
+#endif
 	or    t2, t1, t2
 	REG_S t2, ((1 * SZREG) - (2 * SZREG))(t3)
 
@@ -179,15 +192,22 @@ misaligned_fixup_copy_reverse:
 	 * do {
 	 * 	load_val0 = load_ptr[-1];
 	 * 	store_ptr -= 2;
+	 *#ifdef CONFIG_CPU_BIG_ENDIAN
+	 *  store_ptr[1] = (load_val0 << {a6}) | (load_val1 >> {a7});
+	 *#else
 	 * 	store_ptr[1] = (load_val0 >> {a6}) | (load_val1 << {a7});
+	 *#endif
 	 *
 	 * 	if (store_ptr == {a2})
 	 * 		break;
 	 *
 	 * 	load_val1 = load_ptr[-2];
 	 * 	load_ptr -= 2;
+	 *#ifdef CONFIG_CPU_BIG_ENDIAN
+	 *  store_ptr[0] = (load_val1 << {a6}) | (load_val0 >> {a7});
+	 *#else
 	 * 	store_ptr[0] = (load_val1 >> {a6}) | (load_val0 << {a7});
-	 *
+	 *#endif
 	 * } while (store_ptr != store_ptr_end);
 	 * store_ptr = store_ptr_end;
 	 */
@@ -196,8 +216,13 @@ misaligned_fixup_copy_reverse:
 	1:
 	REG_L t0, (-1 * SZREG)(a4)
 	addi  t4, t4, (-2 * SZREG)
+#ifdef CONFIG_CPU_BIG_ENDIAN
+	srl   t1, t1, a7
+	sll   t2, t0, a6
+#else
 	sll   t1, t1, a7
 	srl   t2, t0, a6
+#endif
 	or    t2, t1, t2
 	REG_S t2, ( 1 * SZREG)(t4)
 
@@ -205,8 +230,13 @@ misaligned_fixup_copy_reverse:
 
 	REG_L t1, (-2 * SZREG)(a4)
 	addi  a4, a4, (-2 * SZREG)
+#ifdef CONFIG_CPU_BIG_ENDIAN
+	srl   t0, t0, a7
+	sll   t2, t1, a6
+#else
 	sll   t0, t0, a7
 	srl   t2, t1, a6
+#endif
 	or    t2, t0, t2
 	REG_S t2, ( 0 * SZREG)(t4)
 
