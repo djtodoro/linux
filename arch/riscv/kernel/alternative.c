@@ -63,9 +63,15 @@ static void riscv_fill_cpu_mfr_info(struct cpu_manufacturer_info_t *cpu_mfr_info
 
 static u32 riscv_instruction_at(void *p)
 {
-	u16 *parcel = p;
+	u8 *base = (u8 *)p;
+	u32 insn = 0;
 
-	return (u32)parcel[0] | (u32)parcel[1] << 16;
+	insn |= base[3] << 24;
+	insn |= base[2] << 16;
+	insn |= base[1] << 8;
+	insn |= base[0];
+
+	return insn;
 }
 
 static void riscv_alternative_fix_auipc_jalr(void *ptr, u32 auipc_insn,
@@ -81,6 +87,10 @@ static void riscv_alternative_fix_auipc_jalr(void *ptr, u32 auipc_insn,
 	/* update instructions */
 	riscv_insn_insert_utype_itype_imm(&call[0], &call[1], imm);
 
+	/* ensure the instructions are little-endian */
+	call[0] = cpu_to_le32(call[0]);
+	call[1] = cpu_to_le32(call[1]);
+
 	/* patch the call place again */
 	patch_text_nosync(ptr, call, sizeof(u32) * 2);
 }
@@ -95,6 +105,9 @@ static void riscv_alternative_fix_jal(void *ptr, u32 jal_insn, int patch_offset)
 
 	/* update instruction */
 	riscv_insn_insert_jtype_imm(&jal_insn, imm);
+
+	/* ensure the instruction is little-endian */
+	jal_insn = cpu_to_le32(jal_insn);
 
 	/* patch the call place again */
 	patch_text_nosync(ptr, &jal_insn, sizeof(u32));

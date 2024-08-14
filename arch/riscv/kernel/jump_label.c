@@ -35,6 +35,8 @@ void arch_jump_label_transform(struct jump_entry *entry,
 		insn = RISCV_INSN_NOP;
 	}
 
+	insn = cpu_to_le32(insn);
+
 	mutex_lock(&text_mutex);
 	patch_text_nosync(addr, &insn, sizeof(insn));
 	mutex_unlock(&text_mutex);
