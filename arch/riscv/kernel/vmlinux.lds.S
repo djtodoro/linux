@@ -19,6 +19,7 @@
 #include <asm/cache.h>
 #include <asm/thread_info.h>
 #include <asm/set_memory.h>
+#include <asm/image.h>
 #include "image-vars.h"
 
 #include <linux/sizes.h>
@@ -169,5 +170,7 @@ SECTIONS
 	.riscv.attributes 0 : { *(.riscv.attributes) }
 
 	DISCARDS
+
+	HEAD_SYMBOLS
 }
 #endif /* CONFIG_XIP_KERNEL */
