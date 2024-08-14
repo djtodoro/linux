@@ -103,8 +103,12 @@ static inline void bpf_flush_icache(void *start, void *end)
 static inline void emit(const u32 insn, struct rv_jit_context *ctx)
 {
 	if (ctx->insns) {
-		ctx->insns[ctx->ninsns] = insn;
-		ctx->insns[ctx->ninsns + 1] = (insn >> 16);
+		u8 *target = (u8 *) &ctx->insns[ctx->ninsns];
+		
+		target[0] = insn & 0x000000ffU;
+		target[1] = (insn & 0x0000ff00U) >> 8;
+		target[2] = (insn & 0x00ff0000U) >> 16;
+		target[3] = (insn & 0xff000000U) >> 24;
 	}
 
 	ctx->ninsns += 2;
@@ -115,8 +119,12 @@ static inline void emitc(const u16 insn, struct rv_jit_context *ctx)
 {
 	BUILD_BUG_ON(!rvc_enabled());
 
-	if (ctx->insns)
-		ctx->insns[ctx->ninsns] = insn;
+	if (ctx->insns) {
+		u8 *target = (u8 *) &ctx->insns[ctx->ninsns];
+		
+		target[0] = insn & 0x00ff;
+		target[1] = (insn & 0xff00) >> 8;
+	}
 
 	ctx->ninsns++;
 }
