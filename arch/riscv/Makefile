@@ -6,19 +6,36 @@
 # for more details.
 #
 
+export BITS
+ifeq ($(CONFIG_ARCH_RV64I),y)
+	BITS := 64
+else
+	BITS := 32
+endif
+
+export ENDIAN_CXFLAGS
+export ENDIAN_LDFLAGS
+ifeq ($(CONFIG_CPU_BIG_ENDIAN),y)
+	ENDIAN_CXFLAGS := -mbig-endian
+	ENDIAN_LDFLAGS := -melf$(BITS)briscv
+else
+	ENDIAN_CXFLAGS := -mlittle-endian
+	ENDIAN_LDFLAGS := -melf$(BITS)lriscv
+endif
+
 OBJCOPYFLAGS    := -O binary
-LDFLAGS_vmlinux := -z norelro
+LDFLAGS_vmlinux := -z norelro $(ENDIAN_LDFLAGS)
 ifeq ($(CONFIG_RELOCATABLE),y)
 	LDFLAGS_vmlinux += -shared -Bsymbolic -z notext --emit-relocs
 	KBUILD_CFLAGS += -fPIE
 endif
 ifeq ($(CONFIG_DYNAMIC_FTRACE),y)
 	LDFLAGS_vmlinux += --no-relax
-	KBUILD_CPPFLAGS += -DCC_USING_PATCHABLE_FUNCTION_ENTRY
+	KBUILD_CPPFLAGS += -DCC_USING_PATCHABLE_FUNCTION_ENTRY $(ENDIAN_CXFLAGS)
 ifeq ($(CONFIG_RISCV_ISA_C),y)
-	CC_FLAGS_FTRACE := -fpatchable-function-entry=4
+	CC_FLAGS_FTRACE := -fpatchable-function-entry=4 $(ENDIAN_CXFLAGS)
 else
-	CC_FLAGS_FTRACE := -fpatchable-function-entry=2
+	CC_FLAGS_FTRACE := -fpatchable-function-entry=2 $(ENDIAN_CXFLAGS)
 endif
 endif
 
@@ -26,22 +43,21 @@ ifeq ($(CONFIG_CMODEL_MEDLOW),y)
 KBUILD_CFLAGS_MODULE += -mcmodel=medany
 endif
 
-export BITS
 ifeq ($(CONFIG_ARCH_RV64I),y)
-	BITS := 64
 	UTS_MACHINE := riscv64
 
-	KBUILD_CFLAGS += -mabi=lp64
-	KBUILD_AFLAGS += -mabi=lp64
+	KBUILD_CFLAGS += -mabi=lp64 $(ENDIAN_CXFLAGS)
+	KBUILD_AFLAGS += -mabi=lp64 $(ENDIAN_CXFLAGS)
 
-	KBUILD_LDFLAGS += -melf64lriscv
+	KBUILD_LDFLAGS += $(ENDIAN_LDFLAGS)
+
 else
-	BITS := 32
 	UTS_MACHINE := riscv32
 
-	KBUILD_CFLAGS += -mabi=ilp32
-	KBUILD_AFLAGS += -mabi=ilp32
-	KBUILD_LDFLAGS += -melf32lriscv
+	KBUILD_CFLAGS += -mabi=ilp32 $(ENDIAN_CXFLAGS)
+	KBUILD_AFLAGS += -mabi=ilp32 $(ENDIAN_CXFLAGS)
+
+	KBUILD_LDFLAGS += $(ENDIAN_LDFLAGS)
 endif
 
 ifeq ($(CONFIG_LD_IS_LLD),y)
@@ -195,3 +211,11 @@ rv32_defconfig:
 PHONY += rv32_nommu_virt_defconfig
 rv32_nommu_virt_defconfig:
 	$(Q)$(MAKE) -f $(srctree)/Makefile nommu_virt_defconfig 32-bit.config
+
+PHONY += rv64be_defconfig
+rv64be_defconfig:
+	$(Q)$(MAKE) -f $(srctree)/Makefile defconfig 64-bit.config big-endian.config
+
+PHONY += rv32be_defconfig
+rv32be_defconfig:
+	$(Q)$(MAKE) -f $(srctree)/Makefile defconfig 32-bit.config big-endian.config

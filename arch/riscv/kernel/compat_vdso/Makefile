@@ -11,8 +11,13 @@ compat_vdso-syms += flush_icache
 COMPAT_CC := $(CC)
 COMPAT_LD := $(LD)
 
+ifeq ($(CONFIG_CPU_BIG_ENDIAN),y)
+COMPAT_CC_FLAGS := -march=rv32g -mabi=ilp32 -mbig-endian
+COMPAT_LD_FLAGS := -melf32briscv
+else
 COMPAT_CC_FLAGS := -march=rv32g -mabi=ilp32
 COMPAT_LD_FLAGS := -melf32lriscv
+endif
 
 # Disable attributes, as they're useless and break the build.
 COMPAT_CC_FLAGS += $(call cc-option,-mno-riscv-attribute)
