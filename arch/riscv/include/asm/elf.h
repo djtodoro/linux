@@ -29,7 +29,11 @@
 #endif
 #endif
 
+#ifdef CONFIG_CPU_BIG_ENDIAN
+#define ELF_DATA	ELFDATA2MSB
+#else
 #define ELF_DATA	ELFDATA2LSB
+#endif
 
 /*
  * This is used to ensure we don't load something for the wrong architecture.
