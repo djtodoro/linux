@@ -29,7 +29,8 @@
 
 #ifdef CONFIG_ERRATA_MIPS
 #define ERRATA_MIPS_P8700_PAUSE_OPCODE 0
-#define ERRATA_MIPS_NUMBER 1
+#define ERRATA_MIPS_P8700_WFI 1
+#define ERRATA_MIPS_NUMBER 2
 #endif
 
 #ifdef __ASSEMBLY__
@@ -45,6 +46,15 @@ ALTERNATIVE(__stringify(RISCV_PTR do_page_fault),			\
 	    __stringify(RISCV_PTR sifive_cip_453_page_fault_trp),	\
 	    SIFIVE_VENDOR_ID, ERRATA_SIFIVE_CIP_453,			\
 	    CONFIG_ERRATA_SIFIVE_CIP_453)
+
+#ifdef CONFIG_ERRATA_MIPS_P8700_WFI
+#define ALT_WFI							\
+ALTERNATIVE "wfi", ".4byte 0x00501013", MIPS_VENDOR_ID,		\
+	ERRATA_MIPS_P8700_WFI, CONFIG_ERRATA_MIPS_P8700_WFI
+#else
+#define ALT_WFI	wfi
+#endif
+
 #else /* !__ASSEMBLY__ */
 
 #define ALT_SFENCE_VMA_ASID(asid)					\
@@ -74,6 +84,20 @@ asm volatile(ALTERNATIVE(                                               \
 #else
 #define ALT_RISCV_PAUSE() \
     asm volatile(RISCV_PAUSE : : : "memory")
+#endif
+
+#ifdef CONFIG_ERRATA_MIPS_P8700_WFI
+#define ALT_RISCV_WFI()                                                 \
+asm volatile(ALTERNATIVE(                                               \
+    "wfi",                      /* Original RISC-V wfi insn */          \
+    ".4byte 0x00501013",        /* Replacement: mips.pause for P8700 */ \
+    MIPS_VENDOR_ID,             /* Vendor ID to match */                \
+    ERRATA_MIPS_P8700_WFI,     /* patch_id */                           \
+    CONFIG_ERRATA_MIPS_P8700_WFI)                                       \
+    : /* no outputs */ : /* no inputs */ : "memory")
+#else
+#define ALT_RISCV_WFI() \
+    __asm__ __volatile__ ("wfi")
 #endif
 
 /*

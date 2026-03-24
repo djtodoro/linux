@@ -13,6 +13,7 @@
 #include <vdso/processor.h>
 
 #include <asm/ptrace.h>
+#include <asm/errata_list.h>
 
 #define arch_get_mmap_end(addr, len, flags)			\
 ({								\
@@ -146,7 +147,7 @@ extern unsigned long __get_wchan(struct task_struct *p);
 
 static inline void wait_for_interrupt(void)
 {
-	__asm__ __volatile__ ("wfi");
+	ALT_RISCV_WFI();
 }
 
 extern phys_addr_t dma32_phys_limit;
